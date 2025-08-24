@@ -2,25 +2,48 @@
 import { Platform } from "react-native";
 import Constants from "expo-constants";
 
+/**
+ * קובע כתובת בסיס ל־API בזמן פיתוח.
+ * סדר עדיפויות:
+ * 1) משתנה סביבה (אם תוסיף בעתיד .env)
+ * 2) זיהוי אוטומטי מ־Expo hostUri (כשמריצים ב־LAN)
+ * 3) אמולטור אנדרואיד → 10.0.2.2
+ * 4) נפילה בטוחה: ה־IP של המחשב שלך ברשת (172.16.0.9)
+ */
 function resolveDevBase(): string {
-  // קדימות ל-ENV אם הגדרת (ngrok/דומיין/IPv4)
+  // 1) ENV (אם תוסיף EXPO_PUBLIC_API_BASE_URL)
   const env = process.env.EXPO_PUBLIC_API_BASE_URL;
-  if (env) return env.replace(/\/+$/, "");
+  if (env) {
+    const cleaned = env.replace(/\/+$/, "");
+    console.debug("[config] API from ENV:", cleaned);
+    return cleaned;
+  }
 
-  // זיהוי דרך Expo (SDK שונים)
+  // 2) זיהוי דרך Expo (SDK שונים)
   const hostUri =
     (Constants as any)?.expoConfig?.hostUri ||
     (Constants as any)?.manifest?.debuggerHost ||
     (Constants as any)?.manifest2?.extra?.expoClient?.hostUri;
 
-  // אם זה אמולטור אנדרואיד – תמיד 10.0.2.2
-  if (Platform.OS === "android") return "http://10.0.2.2:5000";
+  if (hostUri) {
+    const host = hostUri.split(":")[0];
+    const url = `http://${host}:5000`;
+    console.debug("[config] API from Expo hostUri:", url);
+    return url;
+  }
 
-  // אם יש hostUri (למשל "172.16.0.9:8081") – קח רק את ה-IP
-  if (hostUri) return `http://${hostUri.split(":")[0]}:5000`;
+  // 3) אמולטור אנדרואיד
+  if (Platform.OS === "android") {
+    const url = "http://10.0.2.2:5000";
+    console.debug("[config] API fallback (Android emulator):", url);
+    return url;
+  }
 
-  // נפילה בטוחה
-  return Platform.OS === "ios" ? "http://127.0.0.1:5000" : "http://10.0.2.2:5000";
+  // 4) נפילה בטוחה: כתובת המחשב שלך ברשת (טלפון אמיתי צריך IP אמיתי, לא localhost)
+  const fallback = "http://172.16.0.9:5000";
+  console.debug("[config] API fallback (manual IP):", fallback);
+  return fallback;
 }
 
+// בזמן פרודקשן שים דומיין Production אמיתי במקום placeholder
 export const API_URL = __DEV__ ? resolveDevBase() : "https://your-production-domain.com";

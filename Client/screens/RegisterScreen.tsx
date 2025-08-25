@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { View, TextInput, Button, StyleSheet, Alert } from "react-native";
+import { View, TextInput, Button, StyleSheet, Alert, Text, Pressable } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { API_URL } from "../config";
@@ -17,7 +17,10 @@ const RegisterScreen = () => {
   const navigation = useNavigation<NavigationProp>();
 
   const handleRegister = async () => {
-    if (!username || !password) return Alert.alert("Error", "Fill all fields");
+    if (!username || !password) {
+      Alert.alert("Error", "Please fill in all fields");
+      return;
+    }
 
     try {
       const res = await fetch(`${API_URL}/auth/register`, {
@@ -26,12 +29,14 @@ const RegisterScreen = () => {
         body: JSON.stringify({ name: username, password }),
       });
       const data = await res.json();
-      if (!res.ok) return Alert.alert("Register Failed", data.message);
-
+      if (!res.ok) {
+        Alert.alert("Registration Failed", data?.message || "Please check your details");
+        return;
+        }
       Alert.alert("Success", "Registered successfully");
       navigation.navigate("Login");
-    } catch (err) {
-      Alert.alert("Error", "Network error, check your server and IP");
+    } catch {
+      Alert.alert("Error", "Network or server issue");
     }
   };
 
@@ -40,6 +45,7 @@ const RegisterScreen = () => {
       <TextInput
         style={styles.input}
         placeholder="Username"
+        autoCapitalize="none"
         value={username}
         onChangeText={setUsername}
       />
@@ -50,7 +56,15 @@ const RegisterScreen = () => {
         value={password}
         onChangeText={setPassword}
       />
+
       <Button title="Register" onPress={handleRegister} />
+
+      <View style={styles.loginRow}>
+        <Text style={styles.loginText}>Already have an account?</Text>
+        <Pressable onPress={() => navigation.navigate("Login")} hitSlop={8}>
+          <Text style={styles.loginLink}>Log in</Text>
+        </Pressable>
+      </View>
     </View>
   );
 };
@@ -66,4 +80,12 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginBottom: 15,
   },
+  loginRow: {
+    flexDirection: "row",
+    justifyContent: "center",
+    gap: 6,
+    marginTop: 14,
+  },
+  loginText: { color: "#555" },
+  loginLink: { color: "#007aff", fontWeight: "700" },
 });

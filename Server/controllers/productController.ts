@@ -13,13 +13,13 @@ export const getProducts = async (req: Request, res: Response) => {
 
 // POST /products (protected)
 export const addProduct = async (req: Request, res: Response) => {
-  const { title, price, image } = req.body;
-  if (!title || !price || !image) {
+  const { title, price, image, inventory } = req.body;
+  if (!title || !price || !image ||!inventory) {
     return res.status(400).json({ message: "All fields required" });
   }
 
   try {
-    const product = await Product.create({ title, price, image });
+    const product = await Product.create({ title, price, image ,inventory});
     res.status(201).json({ message: "Product added", product });
   } catch (error) {
     res.status(500).json({ message: "Server error", error });

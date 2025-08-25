@@ -40,7 +40,7 @@ function resolveDevBase(): string {
   }
 
   // 4) נפילה בטוחה: כתובת המחשב שלך ברשת (טלפון אמיתי צריך IP אמיתי, לא localhost)
-  const fallback = "http://172.16.0.9:5000";
+  const fallback = "http://192.168.56.1:5000";
   console.debug("[config] API fallback (manual IP):", fallback);
   return fallback;
 }

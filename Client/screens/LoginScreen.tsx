@@ -7,6 +7,7 @@ import {
   StyleSheet,
   Alert,
   ActivityIndicator,
+  Pressable,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useNavigation } from "@react-navigation/native";
@@ -16,7 +17,7 @@ import { API_URL } from "../config";
 type RootStackParamList = {
   Register: undefined;
   Login: undefined;
-  MainTabs: undefined; // 👈 זה היעד אחרי התחברות
+  MainTabs: undefined;
   Cart: undefined;
   ProductDetails: { id: string } | undefined;
 };
@@ -40,7 +41,6 @@ const LoginScreen = () => {
       const res = await fetch(`${API_URL}/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        // השרת שלך מצפה ל-name ולא ל-email
         body: JSON.stringify({ name: username, password }),
       });
 
@@ -59,10 +59,7 @@ const LoginScreen = () => {
 
       await AsyncStorage.setItem("token", token);
 
-      // 👇 מעבר נכון: מחליף את כל הסטאק למסך הראשי MainTabs
       navigation.reset({ index: 0, routes: [{ name: "MainTabs" }] });
-      // לחלופין:
-      // navigation.replace("MainTabs");
     } catch {
       Alert.alert("Error", "Network error, check your server and IP");
     } finally {
@@ -95,6 +92,14 @@ const LoginScreen = () => {
       ) : (
         <Button title="Login" onPress={handleLogin} />
       )}
+
+      {/* קישור להרשמה */}
+      <View style={styles.registerRow}>
+        <Text style={styles.registerText}>אין לך חשבון?</Text>
+        <Pressable onPress={() => navigation.navigate("Register")} hitSlop={8}>
+          <Text style={styles.registerLink}>הרשם/י</Text>
+        </Pressable>
+      </View>
     </View>
   );
 };
@@ -121,4 +126,12 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginBottom: 15,
   },
+  registerRow: {
+    flexDirection: "row",
+    justifyContent: "center",
+    gap: 6,
+    marginTop: 16,
+  },
+  registerText: { color: "#555" },
+  registerLink: { color: "#007aff", fontWeight: "700" },
 });

@@ -1,130 +1,246 @@
 import {
   NavigationProp,
-  RouteProp,
   useNavigation,
-  useRoute,
+  useFocusEffect,
 } from "@react-navigation/native";
-import React, { useState } from "react";
-import {
-  FlatList,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-  Alert,
-} from "react-native";
+import React, { useCallback, useMemo, useState } from "react";
+import { FlatList, Pressable, StyleSheet, Text, View, Alert, Image } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
+import { API_URL } from "../config";
+import { CartItem, getCart, setCart, clearCart } from "../utils/cartStorage";
 
 type RootStackParamList = {
-  Menu: { add: any | null };
-  Cart: { items: CartItem[] };
-  ProductDetails: { id: string; title: string; price: number; qty: number };
+  MainTabs: { screen: "Menu"; params?: any };
+  Cart: undefined;
 };
 
-type CartItem = {
-  id: string;
-  title: string;
-  price: number;
-  qty: number;
-};
-
-// 👇 שים פה את ה-IP של המחשב שלך או URL מ-ngrok
-const BASE_URL = "http://192.168.1.29:5000";
+const PLACEHOLDER = "https://via.placeholder.com/48?text=%20";
 
 export default function CartScreen() {
-  const route = useRoute<RouteProp<RootStackParamList, "Cart">>();
+  const insets = useSafeAreaInsets();
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
+
+  const [items, setItems] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(false);
-  const items = route.params?.items || [];
 
-  const total = items.reduce((sum, i) => sum + i.price * i.qty, 0);
+  useFocusEffect(
+    useCallback(() => {
+      let mounted = true;
+      (async () => {
+        const c = await getCart();
+        if (mounted) setItems(c);
+      })();
+      return () => { mounted = false; };
+    }, [])
+  );
 
-  const submitOrder = async () => {
-    if (items.length === 0) {
-      Alert.alert("Cart is empty");
-      return;
-    }
+  const total = useMemo(() => items.reduce((s, i) => s + i.price * i.qty, 0), [items]);
 
+  const updateItemQty = useCallback((id: string, delta: number) => {
+    setItems(prev => {
+      const idx = prev.findIndex(i => i.id === id);
+      if (idx === -1) return prev;
+
+      const item = prev[idx];
+      const max = Number.isFinite(item.inventory) ? item.inventory : Number.MAX_SAFE_INTEGER;
+      const target = Math.max(1, Math.min(max, item.qty + delta));
+
+      if (target === item.qty && delta > 0 && Number.isFinite(max)) {
+        Alert.alert("Stock limit", `Only ${max} in stock for "${item.title}".`);
+        return prev;
+      }
+
+      const next = [...prev];
+      next[idx] = { ...item, qty: target };
+      setCart(next);
+      return next;
+    });
+  }, []);
+
+  const removeItem = useCallback((id: string) => {
+    Alert.alert("Remove item", "Are you sure you want to remove this item?", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Remove",
+        style: "destructive",
+        onPress: () => {
+          setItems(prev => {
+            const next = prev.filter(i => i.id !== id);
+            setCart(next);
+            return next;
+          });
+        },
+      },
+    ]);
+  }, []);
+
+  const submitOrder = useCallback(async () => {
+    if (!items.length) return Alert.alert("Cart is empty");
     try {
       setLoading(true);
       const token = await AsyncStorage.getItem("token");
-      if (!token) {
-        Alert.alert("You must log in first");
-        setLoading(false);
-        return;
-      }
+      if (!token) { Alert.alert("You must log in first"); return; }
 
-      const res = await fetch(`${BASE_URL}/orders`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ items, total }),
-      });
+      const urls = [`${API_URL}/orders`, `${API_URL}/api/orders`];
+      let lastErr: any = null;
 
-      const data = await res.json();
-      if (res.ok) {
-        Alert.alert("Order placed successfully!");
-        navigation.navigate("Menu", { add: null }); // clear cart
-      } else {
-        Alert.alert("Error", data.message || "Failed to place order");
+      for (const url of urls) {
+        try {
+          const res = await fetch(url.replace(/\/+$/, ""), {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+              Accept: "application/json",
+            },
+            body: JSON.stringify({ items, total }),
+          });
+
+          const text = await res.text();
+          let data: any = null;
+          try { data = text ? JSON.parse(text) : null; } catch { data = { message: text }; }
+
+          if (res.ok) {
+            Alert.alert("Order placed successfully!");
+            await clearCart();
+            setItems([]);
+            navigation.navigate("MainTabs", { screen: "Menu" });
+            setLoading(false);
+            return;
+          } else {
+            lastErr = new Error(data?.message || `HTTP ${res.status}`);
+          }
+        } catch (e: any) {
+          lastErr = e;
+        }
       }
-    } catch (err) {
-      console.log(err);
-      Alert.alert("Error", "Something went wrong");
+      throw lastErr || new Error("Network error");
+    } catch (err: any) {
+      Alert.alert("Error", err?.message || "Something went wrong");
     } finally {
       setLoading(false);
     }
-  };
+  }, [items, total, navigation]);
+
+  const clearAll = useCallback(() => {
+    Alert.alert("Clear cart", "Remove all items from cart?", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Clear",
+        style: "destructive",
+        onPress: async () => {
+          await clearCart();
+          setItems([]);
+          navigation.navigate("MainTabs", { screen: "Menu" });
+        },
+      },
+    ]);
+  }, [navigation]);
 
   return (
-    <View style={{ flex: 1, padding: 16 }}>
+    <View style={[styles.root, { paddingTop: insets.top }]}>
       <FlatList
         data={items}
         keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <View style={styles.row}>
-            <Text>
-              {item.title} x {item.qty}
-            </Text>
-            <Text>₪{item.price * item.qty}</Text>
-          </View>
-        )}
         ListEmptyComponent={<Text>Your cart is empty</Text>}
+        renderItem={({ item }) => {
+          const atMax = Number.isFinite(item.inventory) && item.qty >= item.inventory;
+          return (
+            <View style={styles.row}>
+              <View style={styles.left}>
+                <Image source={{ uri: item.image || PLACEHOLDER }} style={styles.thumb} />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.title} numberOfLines={1}>{item.title}</Text>
+
+                  <View style={styles.qtyBar}>
+                    <Pressable
+                      style={[styles.qtyBtn, item.qty <= 1 && styles.qtyBtnDisabled]}
+                      onPress={() => updateItemQty(item.id, -1)}
+                      disabled={item.qty <= 1}
+                    >
+                      <Ionicons name="remove" size={16} color="#fff" />
+                    </Pressable>
+
+                    <Text style={styles.qtyText}>{item.qty}</Text>
+
+                    <Pressable
+                      style={[styles.qtyBtn, atMax && styles.qtyBtnDisabled]}
+                      onPress={() => updateItemQty(item.id, +1)}
+                      disabled={!!atMax}
+                    >
+                      <Ionicons name="add" size={16} color="#fff" />
+                    </Pressable>
+
+                    <Pressable style={styles.trashBtn} onPress={() => removeItem(item.id)}>
+                      <Ionicons name="trash" size={16} color="#b91c1c" />
+                    </Pressable>
+                  </View>
+
+                  {Number.isFinite(item.inventory) && (
+                    <Text style={styles.stockNote}>In stock: {item.inventory}</Text>
+                  )}
+                </View>
+              </View>
+
+              <Text style={styles.price}>₪{(item.price * item.qty).toFixed(2)}</Text>
+            </View>
+          );
+        }}
+        contentContainerStyle={{ paddingBottom: 12 }}
+        style={{ flex: 1 }}
       />
-      <Text style={styles.total}>Total: ₪{total}</Text>
-      <Pressable
-        style={[styles.clearButton, { backgroundColor: "tomato" }]}
-        onPress={submitOrder}
-        disabled={loading}
-      >
-        <Text style={{ color: "#fff" }}>
-          {loading ? "Submitting..." : "Place Order"}
-        </Text>
-      </Pressable>
-      <Pressable
-        style={[styles.clearButton, { backgroundColor: "#999", marginTop: 8 }]}
-        onPress={() => navigation.navigate("Menu", { add: null })}
-      >
-        <Text style={{ color: "#fff" }}>Clear All</Text>
-      </Pressable>
+
+      <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 16) }]}>
+        <Text style={styles.total}>Total: ₪{total.toFixed(2)}</Text>
+
+        <Pressable style={[styles.btn, { backgroundColor: "tomato" }]} onPress={submitOrder} disabled={loading}>
+          <Text style={{ color: "#fff" }}>{loading ? "Submitting..." : "Place Order"}</Text>
+        </Pressable>
+
+        <Pressable style={[styles.btn, { backgroundColor: "#999", marginTop: 8 }]} onPress={clearAll} disabled={loading}>
+          <Text style={{ color: "#fff" }}>Clear All</Text>
+        </Pressable>
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  root: { flex: 1, backgroundColor: "#fff", paddingHorizontal: 16 },
+
   row: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderColor: "#eee",
+    flexDirection: "row", justifyContent: "space-between", alignItems: "center",
+    paddingVertical: 10, borderBottomWidth: 1, borderColor: "#eee", gap: 8,
   },
-  total: { fontSize: 18, fontWeight: "bold", marginVertical: 16 },
-  clearButton: {
-    padding: 12,
-    borderRadius: 8,
-    alignItems: "center",
+  left: { flexDirection: "row", alignItems: "center", gap: 10, flex: 1 },
+
+  thumb: {
+    width: 44, height: 44, borderRadius: 8,
+    backgroundColor: "#f3f3f3", borderWidth: 1, borderColor: "#efefef",
   },
+
+  title: { fontSize: 14, color: "#111", marginBottom: 6 },
+
+  qtyBar: { flexDirection: "row", alignItems: "center", gap: 8 },
+  qtyBtn: {
+    width: 28, height: 28, borderRadius: 14,
+    alignItems: "center", justifyContent: "center",
+    backgroundColor: "#111827",
+  },
+  qtyBtnDisabled: { backgroundColor: "#9ca3af" },
+  qtyText: { minWidth: 24, textAlign: "center", fontWeight: "700" },
+  trashBtn: {
+    paddingHorizontal: 8, paddingVertical: 4,
+    borderWidth: 1, borderColor: "#f1c9c9", borderRadius: 8,
+    backgroundColor: "#fff0f0",
+  },
+  stockNote: { marginTop: 4, fontSize: 11, color: "#6b7280" },
+
+  price: { fontWeight: "700", color: "#111" },
+
+  footer: { borderTopWidth: 1, borderTopColor: "#eee", paddingTop: 12, backgroundColor: "#fff" },
+  total: { fontSize: 18, fontWeight: "bold", marginBottom: 12 },
+  btn: { padding: 12, borderRadius: 8, alignItems: "center" },
 });

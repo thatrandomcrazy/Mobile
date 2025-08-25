@@ -1,22 +1,16 @@
-// src/screens/ProductDetailsScreen.tsx
 import React, { useMemo, useState } from "react";
 import { View, Text, Image, StyleSheet, Pressable, Modal } from "react-native";
-import { useNavigation, useRoute, RouteProp, CommonActions } from "@react-navigation/native";
+import { useRoute, RouteProp, useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { addToCart } from "../utils/cartStorage";
 
 type RootStackParamList = {
-  MainTabs: {
-    screen: "Menu";
-    params?: {
-      add: { id: string; title: string; price: number; qty: number; image: string; inventory: number } | null;
-      nonce?: number;
-    };
-  };
+  MainTabs: { screen: "Menu"; params?: any };
   ProductDetails: { id: string; title: string; price: number; image: string; inventory: number };
 };
 
 type Nav = NativeStackNavigationProp<RootStackParamList, "ProductDetails">;
-type Rt = RouteProp<RootStackParamList, "ProductDetails">;
+type Rt  = RouteProp<RootStackParamList, "ProductDetails">;
 
 export default function ProductDetailsScreen() {
   const navigation = useNavigation<Nav>();
@@ -37,29 +31,20 @@ export default function ProductDetailsScreen() {
   const dec = () => setQty((q) => Math.max(1, q - 1));
   const inc = () => setQty((q) => Math.min(safeInventory, q + 1));
 
-  const addToCart = () => {
+  const addHandler = async () => {
     if (adding || isOutOfStock || qty <= 0) return;
     setAdding(true);
 
-    const payload = { id, title, price, qty, image, inventory };
-
-    // Update existing MainTabs route (don't push a new one)
-    navigation.dispatch(
-      CommonActions.navigate({
-        name: "MainTabs",
-        params: {
-          screen: "Menu",
-          params: { add: payload, nonce: Date.now() },
-        },
-        merge: true,
-      })
-    );
+    // שומר ישירות בעגלה המקומית (AsyncStorage)
+    await addToCart({ id, title, price, qty, image, inventory: safeInventory });
 
     setModalVisible(true);
     setTimeout(() => {
       setModalVisible(false);
       setAdding(false);
-    }, 1000);
+      // אם תרצה לחזור מיד לתפריט אחרי הוספה:
+      // navigation.navigate("MainTabs", { screen: "Menu" });
+    }, 750);
   };
 
   return (
@@ -67,7 +52,6 @@ export default function ProductDetailsScreen() {
       <Image
         source={{ uri: image || "https://via.placeholder.com/300x300?text=No+Image" }}
         style={styles.image}
-        onError={(e) => console.log("Details image error:", image, e.nativeEvent?.error)}
       />
 
       <Text style={styles.title} numberOfLines={2}>{title}</Text>
@@ -106,7 +90,7 @@ export default function ProductDetailsScreen() {
 
       {!isOutOfStock ? (
         <Pressable
-          onPress={addToCart}
+          onPress={addHandler}
           style={[styles.addButton, adding && { opacity: 0.85 }]}
           disabled={adding}
           accessibilityLabel="Add to cart"
@@ -130,13 +114,7 @@ export default function ProductDetailsScreen() {
 
 const styles = StyleSheet.create({
   wrap: { flex: 1, alignItems: "center", padding: 16, backgroundColor: "#fff" },
-  image: {
-    width: 240,
-    height: 240,
-    marginBottom: 14,
-    borderRadius: 16,
-    backgroundColor: "#f2f2f2",
-  },
+  image: { width: 240, height: 240, marginBottom: 14, borderRadius: 16, backgroundColor: "#f2f2f2" },
   title: { fontSize: 20, fontWeight: "800", textAlign: "center" },
   price: { fontSize: 18, marginBottom: 8, color: "#111", fontWeight: "700" },
 
@@ -148,23 +126,12 @@ const styles = StyleSheet.create({
   oosText: { color: "#b91c1c", fontWeight: "800" },
 
   qtyContainer: { flexDirection: "row", alignItems: "center", marginVertical: 12, gap: 14 },
-  qtyBtn: {
-    width: 44, height: 44, borderRadius: 22,
-    alignItems: "center", justifyContent: "center",
-    backgroundColor: "#111827",
-  },
+  qtyBtn: { width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center", backgroundColor: "#111827" },
   qtyBtnDisabled: { backgroundColor: "#9ca3af" },
   qtyBtnText: { color: "#fff", fontSize: 20, fontWeight: "800" },
   qtyText: { fontSize: 18, fontWeight: "700", minWidth: 28, textAlign: "center" },
 
-  addButton: {
-    backgroundColor: "tomato",
-    paddingVertical: 12,
-    paddingHorizontal: 18,
-    borderRadius: 12,
-    minWidth: 200,
-    alignItems: "center",
-  },
+  addButton: { backgroundColor: "tomato", paddingVertical: 12, paddingHorizontal: 18, borderRadius: 12, minWidth: 200, alignItems: "center" },
   addButtonDisabled: { backgroundColor: "#9ca3af" },
   addButtonText: { color: "#fff", fontWeight: "800", fontSize: 15 },
 

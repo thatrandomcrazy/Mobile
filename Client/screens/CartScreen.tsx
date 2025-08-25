@@ -10,6 +10,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { API_URL } from "../config";
 import { CartItem, getCart, setCart, clearCart } from "../utils/cartStorage";
+import { useAppTheme } from "../theme/ThemeProvider";
 
 type RootStackParamList = {
   MainTabs: { screen: "Menu"; params?: any };
@@ -21,6 +22,7 @@ const PLACEHOLDER = "https://via.placeholder.com/48?text=%20";
 export default function CartScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
+  const { colors } = useAppTheme();
 
   const [items, setItems] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -140,51 +142,74 @@ export default function CartScreen() {
   }, [navigation]);
 
   return (
-    <View style={[styles.root, { paddingTop: insets.top }]}>
+    <View style={[styles.root, { paddingTop: insets.top, backgroundColor: colors.background }]}>
       <FlatList
         data={items}
         keyExtractor={(item) => item.id}
-        ListEmptyComponent={<Text>Your cart is empty</Text>}
+        ListEmptyComponent={<Text style={{ color: colors.muted }}>Your cart is empty</Text>}
         renderItem={({ item }) => {
           const atMax = Number.isFinite(item.inventory) && item.qty >= item.inventory;
           return (
-            <View style={styles.row}>
+            <View style={[styles.row, { borderColor: colors.border }]}>
               <View style={styles.left}>
-                <Image source={{ uri: item.image || PLACEHOLDER }} style={styles.thumb} />
+                <Image
+                  source={{ uri: item.image || PLACEHOLDER }}
+                  style={[styles.thumb, { backgroundColor: colors.card, borderColor: colors.border }]}
+                />
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.title} numberOfLines={1}>{item.title}</Text>
+                  <Text style={[styles.title, { color: colors.text }]} numberOfLines={1}>
+                    {item.title}
+                  </Text>
 
                   <View style={styles.qtyBar}>
                     <Pressable
-                      style={[styles.qtyBtn, item.qty <= 1 && styles.qtyBtnDisabled]}
+                      style={[
+                        styles.qtyBtn,
+                        { backgroundColor: colors.primary },
+                        item.qty <= 1 && { backgroundColor: colors.muted },
+                      ]}
                       onPress={() => updateItemQty(item.id, -1)}
                       disabled={item.qty <= 1}
                     >
                       <Ionicons name="remove" size={16} color="#fff" />
                     </Pressable>
 
-                    <Text style={styles.qtyText}>{item.qty}</Text>
+                    <Text style={[styles.qtyText, { color: colors.text }]}>{item.qty}</Text>
 
                     <Pressable
-                      style={[styles.qtyBtn, atMax && styles.qtyBtnDisabled]}
+                      style={[
+                        styles.qtyBtn,
+                        { backgroundColor: colors.primary },
+                        atMax && { backgroundColor: colors.muted },
+                      ]}
                       onPress={() => updateItemQty(item.id, +1)}
                       disabled={!!atMax}
                     >
                       <Ionicons name="add" size={16} color="#fff" />
                     </Pressable>
 
-                    <Pressable style={styles.trashBtn} onPress={() => removeItem(item.id)}>
-                      <Ionicons name="trash" size={16} color="#b91c1c" />
+                    <Pressable
+                      style={[
+                        styles.trashBtn,
+                        { borderColor: colors.danger, backgroundColor: colors.card },
+                      ]}
+                      onPress={() => removeItem(item.id)}
+                    >
+                      <Ionicons name="trash" size={16} color={colors.danger} />
                     </Pressable>
                   </View>
 
                   {Number.isFinite(item.inventory) && (
-                    <Text style={styles.stockNote}>In stock: {item.inventory}</Text>
+                    <Text style={[styles.stockNote, { color: colors.muted }]}>
+                      In stock: {item.inventory}
+                    </Text>
                   )}
                 </View>
               </View>
 
-              <Text style={styles.price}>₪{(item.price * item.qty).toFixed(2)}</Text>
+              <Text style={[styles.price, { color: colors.text }]}>
+                ₪{(item.price * item.qty).toFixed(2)}
+              </Text>
             </View>
           );
         }}
@@ -192,14 +217,27 @@ export default function CartScreen() {
         style={{ flex: 1 }}
       />
 
-      <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 16) }]}>
-        <Text style={styles.total}>Total: ₪{total.toFixed(2)}</Text>
+      <View
+        style={[
+          styles.footer,
+          { borderTopColor: colors.border, backgroundColor: colors.card, paddingBottom: Math.max(insets.bottom, 16) },
+        ]}
+      >
+        <Text style={[styles.total, { color: colors.text }]}>Total: ₪{total.toFixed(2)}</Text>
 
-        <Pressable style={[styles.btn, { backgroundColor: "tomato" }]} onPress={submitOrder} disabled={loading}>
+        <Pressable
+          style={[styles.btn, { backgroundColor: colors.primary }]}
+          onPress={submitOrder}
+          disabled={loading}
+        >
           <Text style={{ color: "#fff" }}>{loading ? "Submitting..." : "Place Order"}</Text>
         </Pressable>
 
-        <Pressable style={[styles.btn, { backgroundColor: "#999", marginTop: 8 }]} onPress={clearAll} disabled={loading}>
+        <Pressable
+          style={[styles.btn, { backgroundColor: colors.muted, marginTop: 8 }]}
+          onPress={clearAll}
+          disabled={loading}
+        >
           <Text style={{ color: "#fff" }}>Clear All</Text>
         </Pressable>
       </View>
@@ -208,39 +246,48 @@ export default function CartScreen() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: "#fff", paddingHorizontal: 16 },
+  root: { flex: 1, paddingHorizontal: 16 },
 
   row: {
-    flexDirection: "row", justifyContent: "space-between", alignItems: "center",
-    paddingVertical: 10, borderBottomWidth: 1, borderColor: "#eee", gap: 8,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    gap: 8,
   },
   left: { flexDirection: "row", alignItems: "center", gap: 10, flex: 1 },
 
   thumb: {
-    width: 44, height: 44, borderRadius: 8,
-    backgroundColor: "#f3f3f3", borderWidth: 1, borderColor: "#efefef",
+    width: 44,
+    height: 44,
+    borderRadius: 8,
+    borderWidth: 1,
   },
 
-  title: { fontSize: 14, color: "#111", marginBottom: 6 },
+  title: { fontSize: 14, marginBottom: 6 },
 
   qtyBar: { flexDirection: "row", alignItems: "center", gap: 8 },
   qtyBtn: {
-    width: 28, height: 28, borderRadius: 14,
-    alignItems: "center", justifyContent: "center",
-    backgroundColor: "#111827",
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
   },
-  qtyBtnDisabled: { backgroundColor: "#9ca3af" },
+  qtyBtnDisabled: {},
   qtyText: { minWidth: 24, textAlign: "center", fontWeight: "700" },
   trashBtn: {
-    paddingHorizontal: 8, paddingVertical: 4,
-    borderWidth: 1, borderColor: "#f1c9c9", borderRadius: 8,
-    backgroundColor: "#fff0f0",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderWidth: 1,
+    borderRadius: 8,
   },
-  stockNote: { marginTop: 4, fontSize: 11, color: "#6b7280" },
+  stockNote: { marginTop: 4, fontSize: 11 },
 
-  price: { fontWeight: "700", color: "#111" },
+  price: { fontWeight: "700" },
 
-  footer: { borderTopWidth: 1, borderTopColor: "#eee", paddingTop: 12, backgroundColor: "#fff" },
+  footer: { borderTopWidth: 1, paddingTop: 12 },
   total: { fontSize: 18, fontWeight: "bold", marginBottom: 12 },
   btn: { padding: 12, borderRadius: 8, alignItems: "center" },
 });

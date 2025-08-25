@@ -15,6 +15,7 @@ import {
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Ionicons } from "@expo/vector-icons";
 import { API_URL } from "../config";
+import { useAppTheme } from "../theme/ThemeProvider";
 
 type OrderItem = { productId: string; title: string; price: number; qty: number; image?: string };
 type Order = { _id: string; total: number; createdAt: string; items: OrderItem[] };
@@ -23,6 +24,8 @@ const PLACEHOLDER = "https://via.placeholder.com/64?text=%20";
 const SAFE_TOP = Platform.OS === "android" ? StatusBar.currentHeight || 0 : 0;
 
 export default function OrdersScreen() {
+  const { colors } = useAppTheme();
+
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -58,20 +61,22 @@ export default function OrdersScreen() {
 
   const EmptyState = useMemo(() => (
     <View style={styles.emptyWrap}>
-      <View style={styles.emptyBadge}>
+      <View style={[styles.emptyBadge, { backgroundColor: colors.primary }]}>
         <Ionicons name="receipt-outline" size={20} color="#fff" />
       </View>
-      <Text style={styles.emptyTitle}>No orders yet</Text>
-      <Text style={styles.emptySub}>Your orders will appear here after checkout.</Text>
+      <Text style={[styles.emptyTitle, { color: colors.text }]}>No orders yet</Text>
+      <Text style={[styles.emptySub, { color: colors.muted }]}>
+        Your orders will appear here after checkout.
+      </Text>
     </View>
-  ), []);
+  ), [colors.primary, colors.text, colors.muted]);
 
   if (loading) {
     return (
-      <SafeAreaView style={[styles.safe, { paddingTop: SAFE_TOP }]}>
+      <SafeAreaView style={[styles.safe, { paddingTop: SAFE_TOP, backgroundColor: colors.background }]}>
         <View style={styles.center}>
           <ActivityIndicator size="large" />
-          <Text style={{ marginTop: 8 }}>Loading orders…</Text>
+          <Text style={{ marginTop: 8, color: colors.text }}>Loading orders…</Text>
         </View>
       </SafeAreaView>
     );
@@ -79,10 +84,10 @@ export default function OrdersScreen() {
 
   if (err) {
     return (
-      <SafeAreaView style={[styles.safe, { paddingTop: SAFE_TOP }]}>
+      <SafeAreaView style={[styles.safe, { paddingTop: SAFE_TOP, backgroundColor: colors.background }]}>
         <View style={styles.center}>
-          <Ionicons name="alert-circle" size={22} color="crimson" />
-          <Text style={{ color: "crimson", fontWeight: "bold", marginTop: 6 }}>
+          <Ionicons name="alert-circle" size={22} color={colors.danger} />
+          <Text style={{ color: colors.danger, fontWeight: "bold", marginTop: 6 }}>
             Can't load orders: {err}
           </Text>
         </View>
@@ -91,12 +96,19 @@ export default function OrdersScreen() {
   }
 
   return (
-    <SafeAreaView style={[styles.safe, { paddingTop: SAFE_TOP }]}>
+    <SafeAreaView style={[styles.safe, { paddingTop: SAFE_TOP, backgroundColor: colors.background }]}>
       <FlatList
         data={orders}
         extraData={tick}
         keyExtractor={(o) => o._id}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={colors.text}
+            titleColor={colors.text}
+          />
+        }
         contentContainerStyle={{ paddingTop: 8, paddingHorizontal: 14, paddingBottom: 28 }}
         ListEmptyComponent={EmptyState}
         renderItem={({ item }) => <OrderCard order={item} />}
@@ -111,7 +123,16 @@ function minutesSince(dateStr: string) {
   return Math.max(0, Math.floor((now - created) / 60000));
 }
 
-function getStatus(createdAt: string): {
+/**
+ * ממפה סטטוס לזוג (תווית, צבע, אייקון) תוך שימוש רק בצבעים מה־theme:
+ * - Ready -> success
+ * - On the way -> primary
+ * - Preparing -> danger  (כי אין warning ב־Colors)
+ * - Pending -> muted
+ */
+function getStatus(createdAt: string, palette: {
+  success: string; primary: string; danger: string; muted: string;
+}): {
   label: string;
   color: string;
   icon: keyof typeof Ionicons.glyphMap;
@@ -119,17 +140,19 @@ function getStatus(createdAt: string): {
   const mins = minutesSince(createdAt);
 
   if (mins >= 60) {
-    return { label: "Ready", color: "#16a34a", icon: "checkmark-circle" };
+    return { label: "Ready", color: palette.success, icon: "checkmark-circle" };
   } else if (mins >= 30) {
-    return { label: "On the way", color: "#0891b2", icon: "bicycle" };
+    return { label: "On the way", color: palette.primary, icon: "bicycle" };
   } else if (mins >= 10) {
-    return { label: "Preparing", color: "#f59e0b", icon: "construct" };
+    return { label: "Preparing", color: palette.danger, icon: "construct" };
   } else {
-    return { label: "Pending approval", color: "#6b7280", icon: "time" };
+    return { label: "Pending approval", color: palette.muted, icon: "time" };
   }
 }
 
 function OrderCard({ order }: { order: Order }) {
+  const { colors } = useAppTheme();
+
   const prettyDate = useMemo(
     () =>
       new Date(order.createdAt).toLocaleString("en-GB", {
@@ -143,16 +166,30 @@ function OrderCard({ order }: { order: Order }) {
     [order.createdAt]
   );
 
-  const status = getStatus(order.createdAt);
+  const status = getStatus(order.createdAt, {
+    success: colors.success,
+    primary: colors.primary,
+    danger: colors.danger,
+    muted: colors.muted,
+  });
 
   return (
-    <View style={styles.card}>
+    <View style={[
+      styles.card,
+      {
+        backgroundColor: colors.card,
+        borderColor: colors.border,
+        shadowColor: "#000",
+      }
+    ]}>
       <View style={[styles.cardAccent, { backgroundColor: status.color }]} />
 
       <View style={styles.cardHeader}>
         <View style={styles.headerLeft}>
-          <Ionicons name="receipt-outline" size={18} color="#111" />
-          <Text style={styles.title}>Order #{order._id.slice(-6)}</Text>
+          <Ionicons name="receipt-outline" size={18} color={colors.text} />
+          <Text style={[styles.title, { color: colors.text }]}>
+            Order #{order._id.slice(-6)}
+          </Text>
         </View>
 
         <View style={[styles.statusPill, { backgroundColor: status.color }]}>
@@ -161,52 +198,58 @@ function OrderCard({ order }: { order: Order }) {
         </View>
       </View>
 
-      <Text style={styles.date}>{prettyDate}</Text>
+      <Text style={[styles.date, { color: colors.muted }]}>{prettyDate}</Text>
 
       <View style={styles.itemsWrap}>
         {order.items.slice(0, 4).map((it, idx) => (
           <View key={idx} style={styles.itemRow}>
             <Image
               source={{ uri: it.image || PLACEHOLDER }}
-              style={styles.thumb}
+              style={[
+                styles.thumb,
+                { backgroundColor: colors.card, borderColor: colors.border }
+              ]}
               onError={() => {}}
             />
             <View style={{ flex: 1 }}>
-              <Text style={styles.itemTitle} numberOfLines={1}>
+              <Text style={[styles.itemTitle, { color: colors.text }]} numberOfLines={1}>
                 {it.title}
               </Text>
-              <Text style={styles.itemSub}>× {it.qty}</Text>
+              <Text style={[styles.itemSub, { color: colors.muted }]}>× {it.qty}</Text>
             </View>
-            <Text style={styles.itemPrice}>₪{(it.price * it.qty).toFixed(2)}</Text>
+            <Text style={[styles.itemPrice, { color: colors.text }]}>
+              ₪{(it.price * it.qty).toFixed(2)}
+            </Text>
           </View>
         ))}
         {order.items.length > 4 && (
-          <Text style={styles.more}>+{order.items.length - 4} more…</Text>
+          <Text style={[styles.more, { color: colors.muted }]}>
+            +{order.items.length - 4} more…
+          </Text>
         )}
       </View>
 
-      <View style={styles.footerRow}>
-        <Text style={styles.footerLabel}>Total</Text>
-        <Text style={styles.footerTotal}>₪{order.total.toFixed(2)}</Text>
+      <View style={[styles.footerRow, { borderTopColor: colors.border }]}>
+        <Text style={[styles.footerLabel, { color: colors.muted }]}>Total</Text>
+        <Text style={[styles.footerTotal, { color: colors.text }]}>
+          ₪{order.total.toFixed(2)}
+        </Text>
       </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: "#fff" },
+  safe: { flex: 1 },
 
   center: { flex: 1, alignItems: "center", justifyContent: "center", padding: 16 },
 
   card: {
     position: "relative",
-    backgroundColor: "#fff",
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: "#eee",
     padding: 14,
     marginBottom: 14,
-    shadowColor: "#000",
     shadowOpacity: 0.06,
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 6 },
@@ -218,7 +261,6 @@ const styles = StyleSheet.create({
     top: 0,
     bottom: 0,
     width: 4,
-    backgroundColor: "tomato",
     borderTopLeftRadius: 16,
     borderBottomLeftRadius: 16,
   },
@@ -233,7 +275,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 8,
   },
-  title: { fontSize: 16, fontWeight: "800", color: "#111" },
+  title: { fontSize: 16, fontWeight: "800" },
 
   statusPill: {
     flexDirection: "row",
@@ -245,7 +287,7 @@ const styles = StyleSheet.create({
   },
   statusText: { color: "#fff", fontWeight: "800", fontSize: 12, letterSpacing: 0.2 },
 
-  date: { color: "#6b7280", fontSize: 12, marginTop: 6 },
+  date: { fontSize: 12, marginTop: 6 },
 
   itemsWrap: { marginTop: 10, gap: 8 },
   itemRow: {
@@ -257,26 +299,23 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 8,
-    backgroundColor: "#f3f3f3",
     borderWidth: 1,
-    borderColor: "#efefef",
   },
-  itemTitle: { fontSize: 14, fontWeight: "600", color: "#111" },
-  itemSub: { fontSize: 12, color: "#6b7280", marginTop: 2 },
-  itemPrice: { fontSize: 14, fontWeight: "700", color: "#111" },
+  itemTitle: { fontSize: 14, fontWeight: "600" },
+  itemSub: { fontSize: 12, marginTop: 2 },
+  itemPrice: { fontSize: 14, fontWeight: "700" },
 
-  more: { marginTop: 4, color: "#6b7280", fontStyle: "italic" },
+  more: { marginTop: 4, fontStyle: "italic" },
 
   footerRow: {
     marginTop: 10,
     borderTopWidth: 1,
-    borderTopColor: "#f1f1f1",
     paddingTop: 8,
     flexDirection: "row",
     justifyContent: "space-between",
   },
-  footerLabel: { color: "#6b7280", fontSize: 13 },
-  footerTotal: { color: "#111", fontSize: 15, fontWeight: "800" },
+  footerLabel: { fontSize: 13 },
+  footerTotal: { fontSize: 15, fontWeight: "800" },
 
   emptyWrap: {
     alignItems: "center",
@@ -288,7 +327,6 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: "tomato",
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 4,
@@ -296,6 +334,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.08,
     shadowRadius: 8,
   },
-  emptyTitle: { fontSize: 16, fontWeight: "800", color: "#111" },
-  emptySub: { fontSize: 13, color: "#6b7280" },
+  emptyTitle: { fontSize: 16, fontWeight: "800" },
+  emptySub: { fontSize: 13 },
 });

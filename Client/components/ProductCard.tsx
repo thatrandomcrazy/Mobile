@@ -7,16 +7,17 @@ import {
   Platform,
   ActivityIndicator,
   Animated,
+  Image,
 } from "react-native";
-import { Image } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useAppTheme } from "../theme/ThemeProvider";
 
 interface Product {
   id: string;
   title: string;
   price: number;
   image: string;
-  inventory: number; 
+  inventory: number;
 }
 
 interface Props {
@@ -31,8 +32,11 @@ const isValidUri = (s?: string) =>
     /^file:\/\//i.test(s.trim()));
 
 const PLACEHOLDER = "https://via.placeholder.com/300x300?text=No+Image";
+const CARD_RADIUS = 16;
 
 export default function ProductCard({ item, onPress }: Props) {
+  const { colors } = useAppTheme();
+
   const [broken, setBroken] = useState(false);
   const [loadingImg, setLoadingImg] = useState(true);
   const fade = useMemo(() => new Animated.Value(0), []);
@@ -57,12 +61,21 @@ export default function ProductCard({ item, onPress }: Props) {
       android_ripple={{ color: "rgba(0,0,0,0.06)" }}
       style={({ pressed }) => [
         styles.card,
+        {
+          backgroundColor: colors.card,
+          borderColor: colors.border,
+        },
         pressed && !isOut && styles.cardPressed,
         Platform.OS === "android" ? styles.elevated : styles.shadow,
         isOut && styles.cardDisabled,
       ]}
     >
-      <View style={styles.imageWrap}>
+      <View
+        style={[
+          styles.imageWrap,
+          { backgroundColor: colors.card, borderColor: colors.border },
+        ]}
+      >
         {loadingImg && (
           <View style={styles.loader}>
             <ActivityIndicator />
@@ -80,33 +93,41 @@ export default function ProductCard({ item, onPress }: Props) {
         {isOut && (
           <>
             <View style={styles.dim} />
-            <View style={styles.ribbon}>
-              <Text style={styles.ribbonText}>Out of stock
-</Text>
+            <View style={[styles.ribbon, { backgroundColor: colors.text }]}>
+              <Text style={styles.ribbonText}>Out of stock</Text>
             </View>
           </>
         )}
       </View>
 
       <View style={styles.content}>
-        <Text style={styles.title} numberOfLines={2}>
+        <Text style={[styles.title, { color: colors.text }]} numberOfLines={2}>
           {item.title}
         </Text>
 
         <View style={styles.rowBetween}>
-          <View style={[styles.pricePill, isOut && { backgroundColor: "#9ca3af" }]}>
+          <View
+            style={[
+              styles.pricePill,
+              { backgroundColor: isOut ? colors.muted : colors.primary },
+            ]}
+          >
             <Ionicons name="pricetag" size={14} color="#fff" />
             <Text style={styles.priceText}>₪{item.price}</Text>
           </View>
 
           {isOut ? (
-            <View style={styles.outPill}>
+            <View style={[styles.outPill, { backgroundColor: colors.muted }]}>
               <Text style={styles.outPillText}>אזל מהמלאי</Text>
             </View>
           ) : (
             <Pressable
               onPress={onPress}
-              style={({ pressed }) => [styles.btn, pressed && styles.btnPressed]}
+              style={({ pressed }) => [
+                styles.btn,
+                { backgroundColor: colors.primary },
+                pressed && styles.btnPressed,
+              ]}
             >
               <Ionicons name="information-circle" size={16} color="#fff" />
               <Text style={styles.btnText}>Details</Text>
@@ -118,8 +139,6 @@ export default function ProductCard({ item, onPress }: Props) {
   );
 }
 
-const CARD_RADIUS = 16;
-
 const styles = StyleSheet.create({
   card: {
     flexDirection: "row",
@@ -128,10 +147,8 @@ const styles = StyleSheet.create({
     marginHorizontal: 14,
     marginVertical: 9,
     padding: 12,
-    backgroundColor: "#fff",
     borderRadius: CARD_RADIUS,
     borderWidth: 1,
-    borderColor: "#ececec",
   },
   cardPressed: {
     transform: [{ scale: 0.995 }],
@@ -155,9 +172,7 @@ const styles = StyleSheet.create({
     height: 96,
     borderRadius: 12,
     overflow: "hidden",
-    backgroundColor: "#f6f6f6",
     borderWidth: 1,
-    borderColor: "#f0f0f0",
     position: "relative",
   },
   image: {
@@ -178,7 +193,6 @@ const styles = StyleSheet.create({
     bottom: 6,
     left: 6,
     right: 6,
-    backgroundColor: "#111827",
     paddingVertical: 6,
     borderRadius: 8,
     alignItems: "center",
@@ -199,7 +213,6 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 16,
     fontWeight: "700",
-    color: "#1f2937",
     lineHeight: 20,
   },
 
@@ -213,7 +226,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    backgroundColor: "tomato",
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 999,
@@ -226,7 +238,6 @@ const styles = StyleSheet.create({
   },
 
   outPill: {
-    backgroundColor: "#9ca3af",
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 8,
@@ -242,7 +253,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    backgroundColor: "#111827",
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 10,

@@ -37,7 +37,7 @@ function MainTabs() {
           ),
         }}
       />
-      {/* ⬇️ חדש: Orders */}
+      {/*  Orders */}
       <Tab.Screen
         name="Orders"
         component={OrdersScreen}

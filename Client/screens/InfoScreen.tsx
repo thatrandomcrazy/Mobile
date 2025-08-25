@@ -36,7 +36,12 @@ export default function InfoScreen() {
 const styles = (c: any) =>
   StyleSheet.create({
     safe: { flex: 1, backgroundColor: c.background },
-    container: { flex: 1, paddingHorizontal: 12, paddingTop: 4 },
+    container: {
+      flex: 1,
+      paddingHorizontal: 12,
+      paddingTop: 4,
+      marginTop: 20, 
+    },
     row: { flexDirection: "row", alignItems: "center", marginBottom: 6 },
     text: { marginLeft: 6, fontSize: 14, lineHeight: 18, color: c.text },
   });

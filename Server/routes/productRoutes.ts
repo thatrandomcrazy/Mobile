@@ -1,10 +1,14 @@
 import express from "express";
-import { getProducts, addProduct } from "../controllers/productController";
-import { protect } from "../middleware/authMiddleware";
+import { getProducts, getProductById, createProduct, updateProduct, updateInventory } from "../controllers/productController";
+import { protect, requireAdmin } from "../middleware/authMiddleware";
 
 const router = express.Router();
 
 router.get("/", getProducts);
-router.post("/", protect, addProduct); // token required to add product
+router.get("/:id", getProductById);
+
+router.post("/", protect, requireAdmin, createProduct);
+router.put("/:id", protect, requireAdmin, updateProduct);
+router.patch("/:id/inventory", protect, requireAdmin, updateInventory);
 
 export default router;

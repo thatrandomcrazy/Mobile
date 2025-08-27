@@ -1,62 +1,167 @@
-🍔 Restaurant App
-📖 Overview
+README
+Overview
 
-The Restaurant App is a full-stack mobile application (React Native + Node.js + MongoDB) that allows customers to browse a restaurant’s menu, view product details, add items to the cart, register/login (with phone OTP or password), and place orders.
-The app also includes admin/employee features for managing products and orders.
+This project is a full food shop system with a React Native app using Expo and a Node Express server with MongoDB.
+Users can register and log in with username and password or with SMS one time codes.
+Each user has a role either customer or admin.
+Admins get a management interface for products and orders.
+Customers can browse the menu add items to a cart place orders and track order status.
 
-🚀 Features
-👤 Authentication
+Main technologies
 
-Register & Login with username/password or phone number + OTP (Twilio)
+Mobile app
+React Native with Expo
+React Navigation for routing
+A custom theme provider for colors and dark mode
 
-Support for biometric login (fingerprint/faceID)
+Server
+Node with Express
+MongoDB with Mongoose
+JWT for authentication
+Twilio for SMS verification
 
-Secure token storage with AsyncStorage + SecureStore
+How the system works
 
-🍽 Menu & Products
+Authentication and authorization
+When a user logs in the server issues a JWT that includes user id username and role.
+The mobile app stores the token in AsyncStorage.
+Every protected API call sends the token in the Authorization header with the Bearer scheme.
+The endpoint me returns the current user and role.
+The app shows different tab sets by role.
 
-Dynamic menu display (products fetched from server / MongoDB)
+Roles
+Default role is customer
+Admins see additional management screens
 
-Product details screen with image, description, and price
+Products
+Admin can create products update fields and change stock.
+Creating a product requires a valid http or https image URL.
+Each product has title price inventory and image.
 
-Add/remove items from the cart
+Orders
+Customer creates an order that stores items total and creation time.
+Every order has a status from this set
+pending
+preparing
+ready
+on_the_way
+picked_up
+Admin sees all orders and can update the status.
+Customer sees only their own orders and the current status.
 
-🛒 Cart & Orders
+App experience
 
-Persistent cart saved locally with AsyncStorage
+Customer
+Login and registration screens
+Menu of products
+Product details
+Cart and checkout
+Orders screen that shows history and status
 
-Quantity updates & total price calculation
+Admin
+Product management screen with create edit and stock controls
+Admin orders screen that lists every order from all users and lets the admin set status
 
-Checkout screen (server integration ready)
+Key app screens
 
-ℹ️ Info Screen
+Customer tabs
+Menu
+Orders
+Info
 
-Restaurant details (address, contact, social links)
+Admin tabs
+Manage products
+Orders admin
+Info
 
-Google Maps integration (with dark mode option)
+Product management screen
+List of products with quick edit fields
+Update button
+Change inventory buttons plus one and minus one
+Floating action button that opens a modal for creating a product
+Create modal requires title price inventory and image URL and shows a live preview
 
-Share & copy to clipboard functionality
+Admin orders screen
+All orders sorted newest first
+Displays items totals and time
+Status selector with immediate update on the server
 
-🎨 Theme
+Customer orders screen
+Only the current user orders
+Color badge for status
+Items summary and total
 
-System, light & dark mode via ThemeProvider
+Important server endpoints
 
-Stored user preference in AsyncStorage
+Auth
+POST /auth/register
+POST /auth/login
+GET /auth/me
+POST /auth/otp/send
+POST /auth/otp/verify-login
+POST /auth/otp/verify-register
 
-📱 Mobile Ready
+Products
+GET /products
+POST /products admin only
+PUT /products/:id admin only
+PATCH /products/:id/inventory admin only
 
-Built with React Native + Expo
+Orders
+GET /api/orders for the current user
+POST /api/orders create order
+GET /api/orders/admin admin only returns all orders
+PATCH /api/orders/:id/status admin only
 
-Navigation with React Navigation (stack + bottom tabs)
+Data models
 
-🛠 Tech Stack
+User
+username string unique
+password string hashed
+phone string unique
+phoneVerified boolean
+role string one of customer admin default customer
 
-Frontend (Mobile): React Native (Expo), TypeScript, React Navigation, AsyncStorage, SecureStore
+Product
+title string
+price number
+inventory number
+image string
 
-Backend: Node.js, Express.js, MongoDB, Mongoose
+Order
+userId string
+items array of productId title price qty image
+total number
+status one of the allowed values
+createdAt date
 
-Auth: JWT, Twilio (SMS OTP), Biometric Login
+Running the server
 
-Maps: React Native Maps, Google Maps API
+Set environment variables for Mongo connection JWT secret and Twilio credentials.
+Install dependencies then start the server
 
-UI: Custom ThemeProvider (light/dark mode), Ionicons
+npm install
+npm start
+
+Running the mobile app
+
+Set API_URL in the mobile config so it points to your server.
+Install dependencies then start the Expo dev server
+
+npm install
+npx expo start
+
+Open with Expo Go on a device or run on a simulator.
+
+Demo login
+
+Admin
+username ofir
+password ofir2002
+
+Customer
+username ofir2
+password ofir2002
+
+After login as admin the app shows the admin tabs with product management and admin orders.
+After login as customer the app shows the regular tabs for menu orders and info.

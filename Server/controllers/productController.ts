@@ -1,27 +1,46 @@
 import { Request, Response } from "express";
-import Product, { IProduct } from "../models/Product";
+import Product from "../models/Product";
 
-// GET /products
-export const getProducts = async (req: Request, res: Response) => {
+export const getProducts = async (_req: Request, res: Response) => {
+  const items = await Product.find({});
+  res.json(items);
+};
+
+export const getProductById = async (req: Request, res: Response) => {
+  const p = await Product.findById(req.params.id);
+  if (!p) return res.status(404).json({ message: "Not found" });
+  res.json(p);
+};
+
+export const createProduct = async (req: Request, res: Response) => {
   try {
-    const products = await Product.find();
-    res.status(200).json(products);
-  } catch (error) {
-    res.status(500).json({ message: "Server error", error });
+    const p = await Product.create(req.body);
+    res.status(201).json(p);
+  } catch (e: any) {
+    res.status(400).json({ message: e.message });
   }
 };
 
-// POST /products (protected)
-export const addProduct = async (req: Request, res: Response) => {
-  const { title, price, image, inventory } = req.body;
-  if (!title || !price || !image ||!inventory) {
-    return res.status(400).json({ message: "All fields required" });
-  }
-
+export const updateProduct = async (req: Request, res: Response) => {
   try {
-    const product = await Product.create({ title, price, image ,inventory});
-    res.status(201).json({ message: "Product added", product });
-  } catch (error) {
-    res.status(500).json({ message: "Server error", error });
+    const p = await Product.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    if (!p) return res.status(404).json({ message: "Not found" });
+    res.json(p);
+  } catch (e: any) {
+    res.status(400).json({ message: e.message });
+  }
+};
+
+export const updateInventory = async (req: Request, res: Response) => {
+  const { delta, inventory } = req.body;
+  try {
+    const p = await Product.findById(req.params.id);
+    if (!p) return res.status(404).json({ message: "Not found" });
+    if (typeof inventory === "number") p.inventory = inventory;
+    else if (typeof delta === "number") p.inventory = Math.max(0, p.inventory + delta);
+    await p.save();
+    res.json(p);
+  } catch (e: any) {
+    res.status(400).json({ message: e.message });
   }
 };

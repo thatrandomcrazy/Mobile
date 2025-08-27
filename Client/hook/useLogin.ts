@@ -1,4 +1,3 @@
-//hook/useLogin.ts
 import { useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as SecureStore from "expo-secure-store";
@@ -13,11 +12,15 @@ export function useLogin(navigation: any) {
   const [loadingPwd, setLoadingPwd] = useState(false);
   const [loadingPhone, setLoadingPhone] = useState(false);
 
+  const onLoginSuccess = async (token: string, role?: string) => {
+    await AsyncStorage.setItem("token", token);
+    await AsyncStorage.setItem("role", role || "customer");
+    await SecureStore.setItemAsync(BIOMETRIC_TOKEN_KEY, token);
+    navigation.reset({ index: 0, routes: [{ name: "MainTabs" }] });
+  };
+
   const handlePwdLogin = async () => {
-    if (!username || !password) {
-      alert("Enter username and password");
-      return;
-    }
+    if (!username || !password) { alert("Enter username and password"); return; }
     setLoadingPwd(true);
     try {
       const res = await fetch(`${API_URL}/auth/login`, {
@@ -27,11 +30,7 @@ export function useLogin(navigation: any) {
       });
       const data = await res.json();
       if (!res.ok || !data?.token) throw new Error(data?.message || "Login failed");
-
-      await AsyncStorage.setItem("token", data.token);
-      await SecureStore.setItemAsync(BIOMETRIC_TOKEN_KEY, data.token);
-
-      navigation.reset({ index: 0, routes: [{ name: "MainTabs" }] });
+      await onLoginSuccess(data.token, data?.data?.role);
     } catch (e: any) {
       alert(e.message || "Error");
     } finally {
@@ -40,10 +39,7 @@ export function useLogin(navigation: any) {
   };
 
   const handlePhoneLogin = async () => {
-    if (!phone) {
-      alert("Enter phone number");
-      return;
-    }
+    if (!phone) { alert("Enter phone number"); return; }
     setLoadingPhone(true);
     try {
       const res = await fetch(`${API_URL}/auth/otp/send`, {

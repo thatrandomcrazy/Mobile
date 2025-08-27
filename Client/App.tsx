@@ -15,8 +15,11 @@ import LoginScreen from "./screens/LoginScreen";
 import RegisterScreen from "./screens/RegisterScreen";
 import OrdersScreen from "./screens/OrderScreen";
 import OtpVerifyScreen from "./screens/OtpVerifyScreen";
+import AdminOrdersScreen from "./screens/AdminOrdersScreen";
+import AdminMenuScreen from "./screens/AdminMenuScreen";
 
 import { ThemeProvider, useAppTheme } from "./theme/ThemeProvider";
+import { useAuthRole } from "./hook/useAuthRole";
 
 export type RootStackParamList = {
   Register: undefined;
@@ -69,6 +72,51 @@ function MainTabs() {
   );
 }
 
+function AdminTabs() {
+  const { colors } = useAppTheme();
+  return (
+    <Tab.Navigator
+      screenOptions={{
+        headerShown: false,
+        tabBarActiveTintColor: colors.primary,
+        tabBarInactiveTintColor: colors.muted,
+        tabBarStyle: { backgroundColor: colors.card, borderTopColor: colors.border },
+      }}
+    >
+      <Tab.Screen
+        name="Manage"
+        component={AdminMenuScreen}
+        options={{
+          title: "Manage",
+          tabBarIcon: ({ color, size }) => <Ionicons name="settings" size={size} color={color} />,
+        }}
+      />
+      <Tab.Screen
+        name="Orders"
+        component={AdminOrdersScreen}  // ← פה הוחלף למסך האדמין
+        options={{
+          title: "Orders",
+          tabBarIcon: ({ color, size }) => <Ionicons name="receipt-outline" size={size} color={color} />,
+        }}
+      />
+      <Tab.Screen
+        name="Info"
+        component={InfoScreen}
+        options={{
+          title: "Info",
+          tabBarIcon: ({ color, size }) => <Ionicons name="information-circle" size={size} color={color} />,
+        }}
+      />
+    </Tab.Navigator>
+  );
+}
+
+function TabsByRole() {
+  const role = useAuthRole();
+  if (!role) return null;
+  return role === "admin" ? <AdminTabs /> : <MainTabs />;
+}
+
 function AppNavigation() {
   const { navTheme, isDark, colors } = useAppTheme();
   return (
@@ -85,7 +133,7 @@ function AppNavigation() {
         <Stack.Screen name="Register" component={RegisterScreen} options={{ headerShown: false }} />
         <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
         <Stack.Screen name="OtpVerify" component={OtpVerifyScreen} options={{ title: "Verify phone" }} />
-        <Stack.Screen name="MainTabs" component={MainTabs} options={{ headerShown: false }} />
+        <Stack.Screen name="MainTabs" component={TabsByRole} options={{ headerShown: false }} />
         <Stack.Screen name="Cart" component={CartScreen} options={{ title: "Cart" }} />
         <Stack.Screen name="ProductDetails" component={ProductDetailsScreen} options={{ title: "Product Details" }} />
       </Stack.Navigator>

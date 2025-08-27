@@ -17,11 +17,28 @@ import { Ionicons } from "@expo/vector-icons";
 import { API_URL } from "../config";
 import { useAppTheme } from "../theme/ThemeProvider";
 
+type OrderStatus = "pending" | "preparing" | "ready" | "on_the_way" | "picked_up";
 type OrderItem = { productId: string; title: string; price: number; qty: number; image?: string };
-type Order = { _id: string; total: number; createdAt: string; items: OrderItem[] };
+type Order = { _id: string; total: number; createdAt: string; items: OrderItem[]; status: OrderStatus };
 
 const PLACEHOLDER = "https://via.placeholder.com/64?text=%20";
 const SAFE_TOP = Platform.OS === "android" ? StatusBar.currentHeight || 0 : 0;
+
+const STATUS_LABEL: Record<OrderStatus, string> = {
+  pending: "Pending",
+  preparing: "Preparing",
+  ready: "Ready",
+  on_the_way: "On the way",
+  picked_up: "Picked up",
+};
+
+const STATUS_ICON: Record<OrderStatus, keyof typeof Ionicons.glyphMap> = {
+  pending: "time",
+  preparing: "construct",
+  ready: "checkmark-circle",
+  on_the_way: "bicycle",
+  picked_up: "checkmark-done",
+};
 
 export default function OrdersScreen() {
   const { colors } = useAppTheme();
@@ -51,7 +68,6 @@ export default function OrdersScreen() {
   }, []);
 
   useEffect(() => { load(); }, [load]);
-
   useEffect(() => {
     const id = setInterval(() => setTick((t) => t + 1), 60_000);
     return () => clearInterval(id);
@@ -117,36 +133,14 @@ export default function OrdersScreen() {
   );
 }
 
-function minutesSince(dateStr: string) {
-  const created = new Date(dateStr).getTime();
-  const now = Date.now();
-  return Math.max(0, Math.floor((now - created) / 60000));
-}
-
-/**
- * ממפה סטטוס לזוג (תווית, צבע, אייקון) תוך שימוש רק בצבעים מה־theme:
- * - Ready -> success
- * - On the way -> primary
- * - Preparing -> danger  (כי אין warning ב־Colors)
- * - Pending -> muted
- */
-function getStatus(createdAt: string, palette: {
-  success: string; primary: string; danger: string; muted: string;
-}): {
-  label: string;
-  color: string;
-  icon: keyof typeof Ionicons.glyphMap;
-} {
-  const mins = minutesSince(createdAt);
-
-  if (mins >= 60) {
-    return { label: "Ready", color: palette.success, icon: "checkmark-circle" };
-  } else if (mins >= 30) {
-    return { label: "On the way", color: palette.primary, icon: "bicycle" };
-  } else if (mins >= 10) {
-    return { label: "Preparing", color: palette.danger, icon: "construct" };
-  } else {
-    return { label: "Pending approval", color: palette.muted, icon: "time" };
+function statusColorFor(s: OrderStatus, c: any) {
+  switch (s) {
+    case "pending": return c.muted;
+    case "preparing": return c.danger;
+    case "ready": return c.success;
+    case "on_the_way": return c.primary;
+    case "picked_up": return c.success;
+    default: return c.muted;
   }
 }
 
@@ -166,23 +160,16 @@ function OrderCard({ order }: { order: Order }) {
     [order.createdAt]
   );
 
-  const status = getStatus(order.createdAt, {
-    success: colors.success,
-    primary: colors.primary,
-    danger: colors.danger,
-    muted: colors.muted,
-  });
+  const color = statusColorFor(order.status, colors);
+  const icon = STATUS_ICON[order.status];
+  const label = STATUS_LABEL[order.status];
 
   return (
     <View style={[
       styles.card,
-      {
-        backgroundColor: colors.card,
-        borderColor: colors.border,
-        shadowColor: "#000",
-      }
+      { backgroundColor: colors.card, borderColor: colors.border, shadowColor: "#000" }
     ]}>
-      <View style={[styles.cardAccent, { backgroundColor: status.color }]} />
+      <View style={[styles.cardAccent, { backgroundColor: color }]} />
 
       <View style={styles.cardHeader}>
         <View style={styles.headerLeft}>
@@ -192,9 +179,9 @@ function OrderCard({ order }: { order: Order }) {
           </Text>
         </View>
 
-        <View style={[styles.statusPill, { backgroundColor: status.color }]}>
-          <Ionicons name={status.icon} size={14} color="#fff" />
-          <Text style={styles.statusText}>{status.label}</Text>
+        <View style={[styles.statusPill, { backgroundColor: color }]}>
+          <Ionicons name={icon} size={14} color="#fff" />
+          <Text style={styles.statusText}>{label}</Text>
         </View>
       </View>
 
@@ -205,11 +192,7 @@ function OrderCard({ order }: { order: Order }) {
           <View key={idx} style={styles.itemRow}>
             <Image
               source={{ uri: it.image || PLACEHOLDER }}
-              style={[
-                styles.thumb,
-                { backgroundColor: colors.card, borderColor: colors.border }
-              ]}
-              onError={() => {}}
+              style={[styles.thumb, { backgroundColor: colors.card, borderColor: colors.border }]}
             />
             <View style={{ flex: 1 }}>
               <Text style={[styles.itemTitle, { color: colors.text }]} numberOfLines={1}>
@@ -241,7 +224,6 @@ function OrderCard({ order }: { order: Order }) {
 
 const styles = StyleSheet.create({
   safe: { flex: 1 },
-
   center: { flex: 1, alignItems: "center", justifyContent: "center", padding: 16 },
 
   card: {
@@ -264,17 +246,8 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 16,
     borderBottomLeftRadius: 16,
   },
-
-  cardHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  headerLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
+  cardHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  headerLeft: { flexDirection: "row", alignItems: "center", gap: 8 },
   title: { fontSize: 16, fontWeight: "800" },
 
   statusPill: {
@@ -290,39 +263,19 @@ const styles = StyleSheet.create({
   date: { fontSize: 12, marginTop: 6 },
 
   itemsWrap: { marginTop: 10, gap: 8 },
-  itemRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-  },
-  thumb: {
-    width: 44,
-    height: 44,
-    borderRadius: 8,
-    borderWidth: 1,
-  },
+  itemRow: { flexDirection: "row", alignItems: "center", gap: 10 },
+  thumb: { width: 44, height: 44, borderRadius: 8, borderWidth: 1 },
   itemTitle: { fontSize: 14, fontWeight: "600" },
   itemSub: { fontSize: 12, marginTop: 2 },
   itemPrice: { fontSize: 14, fontWeight: "700" },
 
   more: { marginTop: 4, fontStyle: "italic" },
 
-  footerRow: {
-    marginTop: 10,
-    borderTopWidth: 1,
-    paddingTop: 8,
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
+  footerRow: { marginTop: 10, borderTopWidth: 1, paddingTop: 8, flexDirection: "row", justifyContent: "space-between" },
   footerLabel: { fontSize: 13 },
   footerTotal: { fontSize: 15, fontWeight: "800" },
 
-  emptyWrap: {
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 48,
-    gap: 8,
-  },
+  emptyWrap: { alignItems: "center", justifyContent: "center", paddingVertical: 48, gap: 8 },
   emptyBadge: {
     width: 56,
     height: 56,

@@ -85,7 +85,7 @@ export default function CartScreen() {
       const token = await AsyncStorage.getItem("token");
       if (!token) { Alert.alert("You must log in first"); return; }
 
-      const urls = [`${API_URL}/orders`, `${API_URL}/api/orders`];
+      const urls = [`${API_URL}/api/orders`];
       let lastErr: any = null;
 
       for (const url of urls) {

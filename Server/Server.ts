@@ -18,18 +18,15 @@ app.use(express.json());
 // === routes ===
 app.use("/auth", authRoutes);
 app.use("/products", productRoutes);
-app.use("/orders", orderRoutes);
+app.use("/api/orders", orderRoutes);
 
-// health
 app.get("/", (_req: Request, res: Response) => {
   res.send("API is running");
 });
 
-// === start server AFTER Mongo ===
 (async () => {
   try {
     await connectDB();
-    // ↓↓↓ להאזין לכל הכתובות, לא רק localhost
     app.listen(PORT, "0.0.0.0", () => {
       console.log(`Server running on 0.0.0.0:${PORT}`);
     });

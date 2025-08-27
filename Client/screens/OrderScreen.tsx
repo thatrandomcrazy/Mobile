@@ -36,7 +36,7 @@ export default function OrdersScreen() {
     setErr(null);
     try {
       const token = await AsyncStorage.getItem("token");
-      const res = await fetch(`${API_URL}/orders`, {
+      const res = await fetch(`${API_URL}/api/orders`, {
         headers: { Accept: "application/json", Authorization: `Bearer ${token}` },
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);

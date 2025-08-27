@@ -90,7 +90,6 @@ export default function InfoScreen() {
       );
     })();
 
-    // ניקוי כשעוזבים מסך/מכבים מעקב
     return () => {
       if (watchSub.current) {
         watchSub.current.remove();
@@ -99,7 +98,6 @@ export default function InfoScreen() {
     };
   }, [tracking]);
 
-  // מרכוז למסעדה אחרי render
   useEffect(() => {
     const id = setTimeout(() => {
       centerOnRestaurant(false);
@@ -139,7 +137,10 @@ export default function InfoScreen() {
               <Text style={s.title}>Burger House</Text>
               <View style={s.row}>
                 <Ionicons name="star" size={14} color="#ffd166" />
-                <Text style={[s.subtle, { marginLeft: 4 }]}>4.7 • 1.2k ratings</Text>
+                <Text style={[s.subtle, { marginLeft: 4 }, { color: "#61d67cff" }]}>
+                  4.7 • 1.2k ratings
+                </Text>
+
               </View>
             </View>
           </View>

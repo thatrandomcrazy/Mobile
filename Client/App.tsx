@@ -13,26 +13,32 @@ import MenuScreen from "./screens/MenuScreen";
 import ProductDetailsScreen from "./screens/ProductDetailsScreen";
 import LoginScreen from "./screens/LoginScreen";
 import RegisterScreen from "./screens/RegisterScreen";
-import OrdersScreen from "./screens/OrderScreen"; // אם הקובץ שלך נקרא OrdersScreen.tsx שנה גם כאן
+import OrdersScreen from "./screens/OrderScreen";
+import OtpVerifyScreen from "./screens/OtpVerifyScreen";
 
 import { ThemeProvider, useAppTheme } from "./theme/ThemeProvider";
 
-const Stack = createNativeStackNavigator();
+export type RootStackParamList = {
+  Register: undefined;
+  Login: undefined;
+  MainTabs: undefined;
+  Cart: undefined;
+  ProductDetails: undefined;
+  OtpVerify: { mode: "register" | "login"; phone: string; username?: string; password?: string };
+};
+
+const Stack = createNativeStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator();
 
 function MainTabs() {
   const { colors } = useAppTheme();
-
   return (
     <Tab.Navigator
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.muted,
-        tabBarStyle: {
-          backgroundColor: colors.card,
-          borderTopColor: colors.border,
-        },
+        tabBarStyle: { backgroundColor: colors.card, borderTopColor: colors.border },
       }}
     >
       <Tab.Screen
@@ -40,9 +46,7 @@ function MainTabs() {
         component={MenuScreen}
         options={{
           title: "Menu",
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="restaurant" size={size} color={color} />
-          ),
+          tabBarIcon: ({ color, size }) => <Ionicons name="restaurant" size={size} color={color} />,
         }}
       />
       <Tab.Screen
@@ -50,9 +54,7 @@ function MainTabs() {
         component={OrdersScreen}
         options={{
           title: "Orders",
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="receipt-outline" size={size} color={color} />
-          ),
+          tabBarIcon: ({ color, size }) => <Ionicons name="receipt-outline" size={size} color={color} />,
         }}
       />
       <Tab.Screen
@@ -60,9 +62,7 @@ function MainTabs() {
         component={InfoScreen}
         options={{
           title: "Info",
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="information-circle" size={size} color={color} />
-          ),
+          tabBarIcon: ({ color, size }) => <Ionicons name="information-circle" size={size} color={color} />,
         }}
       />
     </Tab.Navigator>
@@ -71,14 +71,11 @@ function MainTabs() {
 
 function AppNavigation() {
   const { navTheme, isDark, colors } = useAppTheme();
-
   return (
     <NavigationContainer theme={navTheme}>
-      <StatusBar
-        barStyle={isDark ? "light-content" : "dark-content"}
-        backgroundColor={colors.background}
-      />
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={colors.background} />
       <Stack.Navigator
+        initialRouteName="Login"
         screenOptions={{
           headerStyle: { backgroundColor: colors.card },
           headerTintColor: colors.text,
@@ -87,6 +84,7 @@ function AppNavigation() {
       >
         <Stack.Screen name="Register" component={RegisterScreen} options={{ headerShown: false }} />
         <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="OtpVerify" component={OtpVerifyScreen} options={{ title: "Verify phone" }} />
         <Stack.Screen name="MainTabs" component={MainTabs} options={{ headerShown: false }} />
         <Stack.Screen name="Cart" component={CartScreen} options={{ title: "Cart" }} />
         <Stack.Screen name="ProductDetails" component={ProductDetailsScreen} options={{ title: "Product Details" }} />

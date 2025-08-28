@@ -58,7 +58,7 @@ export default function AdminMenuScreen() {
   }
 
   return (
-    <View style={s.container}>
+    <View style={[s.container, { paddingTop: 30 }]}>
       <Text style={s.h1}>Products</Text>
 
       <FlatList

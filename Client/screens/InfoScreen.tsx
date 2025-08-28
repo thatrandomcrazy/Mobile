@@ -31,7 +31,7 @@ export default function InfoScreen() {
     });
 
   return (
-    <ScrollView contentContainerStyle={s.scroll}>
+  <ScrollView contentContainerStyle={[s.scroll, { paddingTop: 30 }]}>
       <View style={s.heroWrap}>
         <Image source={{ uri: HERO }} style={s.hero} />
         <View style={[s.heroOverlay, { backgroundColor: "rgba(0,0,0,0.25)" }]} />

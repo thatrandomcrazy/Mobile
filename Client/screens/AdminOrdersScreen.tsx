@@ -112,7 +112,7 @@ export default function AdminOrdersScreen() {
       contentContainerStyle={{ padding: 14 }}
       ListEmptyComponent={Empty}
       renderItem={({ item }) => (
-        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border ,  paddingTop: 30  }]}>
           <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
               <Ionicons name="receipt-outline" size={18} color={colors.text} />

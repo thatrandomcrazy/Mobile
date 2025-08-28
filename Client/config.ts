@@ -28,7 +28,7 @@ function resolveDevBase(): string {
     return url;
   }
 
-  const fallback = "http://172.16.0.9:5000";
+  const fallback = "http://172.29.176.1:5000";
   console.debug("[config] API fallback (manual IP):", fallback);
   return fallback;
 }

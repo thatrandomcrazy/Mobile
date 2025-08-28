@@ -158,10 +158,16 @@ Demo login
 Admin
 username ofir
 password ofir2002
+phone 0522226889
 
 Customer
 username ofir2
 password ofir2002
 
-After login as admin the app shows the admin tabs with product management and admin orders.
+After login as admin the app shows the admin tabs with product management and all the orders management.
 After login as customer the app shows the regular tabs for menu orders and info.
+
+change this 172.29.176.1 to your ip in client->config.ts
+const fallback = "http://172.29.176.1:5000";
+console.debug("[config] API fallback (manual IP):", fallback);
+return fallback;

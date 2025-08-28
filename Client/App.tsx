@@ -93,7 +93,7 @@ function AdminTabs() {
       />
       <Tab.Screen
         name="Orders"
-        component={AdminOrdersScreen}  // ← פה הוחלף למסך האדמין
+        component={AdminOrdersScreen}  
         options={{
           title: "Orders",
           tabBarIcon: ({ color, size }) => <Ionicons name="receipt-outline" size={size} color={color} />,

@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "burgerApp",
-    "slug": "burgerApp",
+    "name": "Grabbit",
+    "slug": "Grabbit",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "burgerapp",
+    "scheme": "Grabbit",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
@@ -19,7 +19,8 @@
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "package": "com.anonymous.Grabbit"
     },
     "web": {
       "bundler": "metro",

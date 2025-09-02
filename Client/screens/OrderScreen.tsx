@@ -47,14 +47,19 @@ export default function OrdersScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [err, setErr] = useState<string | null>(null);
-  const [tick, setTick] = useState(0);
 
   const load = useCallback(async () => {
     setErr(null);
     try {
       const token = await AsyncStorage.getItem("token");
-      const res = await fetch(`${API_URL}/api/orders`, {
-        headers: { Accept: "application/json", Authorization: `Bearer ${token}` },
+      const res = await fetch(`${API_URL}/api/orders?_=${Date.now()}`, {
+        method: "GET",
+        headers: {
+          Accept: "application/json",
+          Authorization: `Bearer ${token}`,
+          "Cache-Control": "no-cache",
+          Pragma: "no-cache",
+        },
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data: Order[] = await res.json();
@@ -67,25 +72,29 @@ export default function OrdersScreen() {
     }
   }, []);
 
-  useEffect(() => { load(); }, [load]);
   useEffect(() => {
-    const id = setInterval(() => setTick((t) => t + 1), 60_000);
-    return () => clearInterval(id);
-  }, []);
+    load();
+  }, [load]);
 
-  const onRefresh = () => { setRefreshing(true); load(); };
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await load();
+  }, [load]);
 
-  const EmptyState = useMemo(() => (
-    <View style={styles.emptyWrap}>
-      <View style={[styles.emptyBadge, { backgroundColor: colors.primary }]}>
-        <Ionicons name="receipt-outline" size={20} color="#fff" />
+  const EmptyState = useMemo(
+    () => (
+      <View style={styles.emptyWrap}>
+        <View style={[styles.emptyBadge, { backgroundColor: colors.primary }]}>
+          <Ionicons name="receipt-outline" size={20} color="#fff" />
+        </View>
+        <Text style={[styles.emptyTitle, { color: colors.text }]}>No orders yet</Text>
+        <Text style={[styles.emptySub, { color: colors.muted }]}>
+          Your orders will appear here after checkout.
+        </Text>
       </View>
-      <Text style={[styles.emptyTitle, { color: colors.text }]}>No orders yet</Text>
-      <Text style={[styles.emptySub, { color: colors.muted }]}>
-        Your orders will appear here after checkout.
-      </Text>
-    </View>
-  ), [colors.primary, colors.text, colors.muted]);
+    ),
+    [colors.primary, colors.text, colors.muted]
+  );
 
   if (loading) {
     return (
@@ -115,7 +124,6 @@ export default function OrdersScreen() {
     <SafeAreaView style={[styles.safe, { paddingTop: SAFE_TOP, backgroundColor: colors.background }]}>
       <FlatList
         data={orders}
-        extraData={tick}
         keyExtractor={(o) => o._id}
         refreshControl={
           <RefreshControl
@@ -135,12 +143,18 @@ export default function OrdersScreen() {
 
 function statusColorFor(s: OrderStatus, c: any) {
   switch (s) {
-    case "pending": return c.muted;
-    case "preparing": return c.danger;
-    case "ready": return c.success;
-    case "on_the_way": return c.primary;
-    case "picked_up": return c.success;
-    default: return c.muted;
+    case "pending":
+      return c.muted;
+    case "preparing":
+      return c.danger;
+    case "ready":
+      return c.success;
+    case "on_the_way":
+      return c.primary;
+    case "picked_up":
+      return c.success;
+    default:
+      return c.muted;
   }
 }
 
@@ -165,18 +179,18 @@ function OrderCard({ order }: { order: Order }) {
   const label = STATUS_LABEL[order.status];
 
   return (
-    <View style={[
-      styles.card,
-      { backgroundColor: colors.card, borderColor: colors.border, shadowColor: "#000" }
-    ]}>
+    <View
+      style={[
+        styles.card,
+        { backgroundColor: colors.card, borderColor: colors.border, shadowColor: "#000" },
+      ]}
+    >
       <View style={[styles.cardAccent, { backgroundColor: color }]} />
 
       <View style={styles.cardHeader}>
         <View style={styles.headerLeft}>
           <Ionicons name="receipt-outline" size={18} color={colors.text} />
-          <Text style={[styles.title, { color: colors.text }]}>
-            Order #{order._id.slice(-6)}
-          </Text>
+          <Text style={[styles.title, { color: colors.text }]}>Order #{order._id.slice(-6)}</Text>
         </View>
 
         <View style={[styles.statusPill, { backgroundColor: color }]}>
@@ -200,23 +214,17 @@ function OrderCard({ order }: { order: Order }) {
               </Text>
               <Text style={[styles.itemSub, { color: colors.muted }]}>× {it.qty}</Text>
             </View>
-            <Text style={[styles.itemPrice, { color: colors.text }]}>
-              ₪{(it.price * it.qty).toFixed(2)}
-            </Text>
+            <Text style={[styles.itemPrice, { color: colors.text }]}>₪{(it.price * it.qty).toFixed(2)}</Text>
           </View>
         ))}
         {order.items.length > 4 && (
-          <Text style={[styles.more, { color: colors.muted }]}>
-            +{order.items.length - 4} more…
-          </Text>
+          <Text style={[styles.more, { color: colors.muted }]}>+{order.items.length - 4} more…</Text>
         )}
       </View>
 
       <View style={[styles.footerRow, { borderTopColor: colors.border }]}>
         <Text style={[styles.footerLabel, { color: colors.muted }]}>Total</Text>
-        <Text style={[styles.footerTotal, { color: colors.text }]}>
-          ₪{order.total.toFixed(2)}
-        </Text>
+        <Text style={[styles.footerTotal, { color: colors.text }]}>₪{order.total.toFixed(2)}</Text>
       </View>
     </View>
   );
@@ -225,7 +233,6 @@ function OrderCard({ order }: { order: Order }) {
 const styles = StyleSheet.create({
   safe: { flex: 1 },
   center: { flex: 1, alignItems: "center", justifyContent: "center", padding: 16 },
-
   card: {
     position: "relative",
     borderRadius: 16,
@@ -249,7 +256,6 @@ const styles = StyleSheet.create({
   cardHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   headerLeft: { flexDirection: "row", alignItems: "center", gap: 8 },
   title: { fontSize: 16, fontWeight: "800" },
-
   statusPill: {
     flexDirection: "row",
     alignItems: "center",
@@ -259,22 +265,17 @@ const styles = StyleSheet.create({
     borderRadius: 999,
   },
   statusText: { color: "#fff", fontWeight: "800", fontSize: 12, letterSpacing: 0.2 },
-
   date: { fontSize: 12, marginTop: 6 },
-
   itemsWrap: { marginTop: 10, gap: 8 },
   itemRow: { flexDirection: "row", alignItems: "center", gap: 10 },
   thumb: { width: 44, height: 44, borderRadius: 8, borderWidth: 1 },
   itemTitle: { fontSize: 14, fontWeight: "600" },
   itemSub: { fontSize: 12, marginTop: 2 },
   itemPrice: { fontSize: 14, fontWeight: "700" },
-
   more: { marginTop: 4, fontStyle: "italic" },
-
   footerRow: { marginTop: 10, borderTopWidth: 1, paddingTop: 8, flexDirection: "row", justifyContent: "space-between" },
   footerLabel: { fontSize: 13 },
   footerTotal: { fontSize: 15, fontWeight: "800" },
-
   emptyWrap: { alignItems: "center", justifyContent: "center", paddingVertical: 48, gap: 8 },
   emptyBadge: {
     width: 56,
